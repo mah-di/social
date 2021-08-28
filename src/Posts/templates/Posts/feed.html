@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Feed
+{% endblock title %}
+
+{% block content %}
+{{path}}
+{% if messages %}
+  {% for message in messages %}
+    {% if 'success' in message.tags %}
+      <div id="message-box" class="ui green message">
+        <i class="close icon" aria-label="Close" onclick="document.getElementById('message-box').style.display='none'"></i>
+        <div class="header">
+          {{message}}
+        </div>
+      </div>
+    {% elif 'info' in message.tags %}
+      <div id="message-box" class="ui blue message">
+        <i class="close icon" aria-label="Close" onclick="document.getElementById('message-box').style.display='none'"></i>
+        <div class="header">
+          {{message}}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+<div class="ui grid">
+  <div class="row">
+    <div class="twelve wide column">
+      <div class="ui segment">
+          <form class="ui form" method="POST" action="{% url 'posts:make_post' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{post_form}}
+            <div class="three fields">
+              <div class="field"></div>
+              <div class="field"></div>
+              <div class="field">
+                <button type="submit" class="ui green fluid button">Post</button>
+              </div>
+            </div>
+          </form>
+      </div>
+      <div class="ui feed">
+        {% for post in posts %}
+          <div  class="event ui card feed-post">
+            <div class="label">
+              <a href="{% url 'profiles:profile' slug=post.author.slug %}">
+                <img src={{post.author.avatar.url}}>
+              </a>
+            </div>
+            <div class="content">
+              {% ifequal user_profile post.author %}
+              <a href="{% url 'posts:delete_post' pk=post.pk %}" class="ui right floated basic mini button">Delete</a>
+              <a href="{% url 'posts:update_post' pk=post.pk %}" class="ui right floated basic mini button">Update</a>
+              {% endifequal %}
+              <div class="date">
+                <a class="author-cus" href="{% url 'profiles:profile' slug=post.author.slug %}">{{post.author.get_full_name}}</a>
+              </div>
+              <div class="meta">
+                <a class="" href="{% url 'profiles:profile' slug=post.author.slug %}">@{{post.author.user}}</a>
+              </div>
+              <div class="summary">
+                <span class="date-cus">{{post.created|timesince}} ago</span>
+              </div>
+              <div class="extra text">
+                  {{post.get_preview|linebreaks}}
+                  {% if post.is_more %}
+                  <a href="{% url 'posts:single_post' pk=post.pk %}">see more</a>
+                  {% endif %}
+              </div>
+              <br>
+              {% if post.image %}
+                <div class="ui medium images">
+                    <img src={{post.image.url}}>
+                </div>
+                <br>
+              {% endif %}
+              <div class="">
+                <form class="like_unlike ui left floated form" id="{{post.id}}" action="{% url 'posts:like_unlike' %}" method="POST">
+                  {% csrf_token %}
+                  <button type="submit" class="ui {% if user_profile not in post.likes.all %} basic {% endif %} primary mini button">
+                    <i class="thumbs up icon"></i>
+                    <span class="like-btn-{{post.id}}">
+                      {% if user_profile not in post.likes.all %}
+                      Like
+                      {% else %}
+                      Unlike
+                      {% endif %}
+                    </span>
+                  </button>
+                  &nbsp;
+                  <span class="like-count-{{post.id}}">
+                  {% if post.get_likes == 0 %}
+                    No Likes
+                  {% elif post.get_likes == 1 %}
+                    1 Like
+                  {% else %}
+                    {{post.get_likes}} Likes
+                  {% endif %}
+                  </span>
+                </form>
+                {% if post.get_total_comments != 0 %}
+                <button type="button" style="padding: 7px 15px 7px 20px;" class="ui right floated tiny basic button comment-tg"><i class="angle down icon"></i></button>
+                {% endif %}
+                <a class="right floated total-comments" href="{% url 'posts:single_post' pk=post.pk %}">
+                {% if post.get_total_comments == 0 %}
+                  No Comments
+                {% elif post.get_total_comments == 1 %}
+                  1 Comment
+                {% else %}
+                  {{post.get_total_comments}} Comments
+                {% endif %}
+                </a>
+                <br>
+                <div class="ui grid comment-preview">
+                  <div class="twelve wide column">
+                  </div>
+                  <div class="four wide column">
+                  </div>
+                </div>
+                <div style="display: none;" class="ui comments" id="ajax-comment-{{post.pk}}">
+
+                </div>
+                <div class="ui comments comment-box">
+                  {% for comment in post.get_comments %}
+                    <div class="comment">
+                      {% ifequal user_profile comment.commentor %}
+                      <a href="{% url 'posts:delete_comment' pk=comment.pk %}" class="ui right floated basic mini button">Delete</a>
+                      <a href="{% url 'posts:update_comment' pk=comment.pk %}" class="ui right floated basic mini button">Update</a>
+                      {% endifequal %}
+                      <a href="{% url 'profiles:profile' slug=comment.commentor.slug %}" class="avatar">
+                        <img class="comment-avatar" src={{comment.commentor.avatar.url}}>
+                      </a>
+                      <div class="content">
+                        <a href="{% url 'profiles:profile' slug=comment.commentor.slug %}" class="author">{{comment.commentor.user}}</a>
+                        <div class="metadata">
+                          <span class="date">{{ comment.created|timesince }} ago</span>
+                        </div>
+                        <div class="text">
+                          {{comment.body|linebreaks}}
+                        </div>
+                        <div class="actions">
+                          <a class="reply">Reply</a>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+                <form action="{% url 'posts:make_comment' %}" method="POST" id="form{{post.pk}}" class="ui form comment-form">
+                  {% csrf_token %}
+                  <div class="fields">
+                    <div class="twelve wide field">
+                      {{comment_form}}
+                      <input type="hidden" name="post_pk" value="{{post.pk}}">
+                    </div>
+                    <div class="four wide field">
+                      <button type="submit" class="ui purple comment-button button">Comment</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+
+  $(document).ready(function(){
+
+    $('.comment-tg').click(function(){
+      $(this).children().toggleClass('up')
+      $(this).children().toggleClass('down')
+      if ($(this).siblings('.comment-box').css('display') === 'none') {
+        $(this).siblings('.comment-box').show('slow')
+      }
+      else {
+        $(this).siblings('.comment-box').hide('slow')
+        
+      }
+    })
+    
+    $('.like_unlike').submit(function(e){
+      e.preventDefault()
+
+      const post_id = $(this).attr('id')
+      const url = $(this).attr('action')
+      const action = $.trim($(`.like-btn-${post_id}`).text())
+      console.log(action)
+
+      $.ajax({
+        type: 'POST',
+        url: url,
+        data: {
+          'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val(),
+          'post_id': post_id,
+        },
+        success: function(response) {
+          if (action === 'Like') {
+            $(`.like-btn-${post_id}`).text('Unlike')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').removeClass('basic')
+          }
+          else {
+            $(`.like-btn-${post_id}`).text('Like')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').addClass('basic')
+          }
+
+          likes = parseInt(response['likes'])
+          if (likes === 0) {
+            $(`.like-count-${post_id}`).text('No Likes')
+          }
+          else if (likes === 1) {
+            $(`.like-count-${post_id}`).text('1 Like')
+          }
+          else {
+            $(`.like-count-${post_id}`).text(`${likes} Likes`)
+          }
+        },
+        error: function(response) {
+          console.log(response)
+        },
+      })
+    })
+  
+    $('.comment-form').on('submit', function(e){
+      e.preventDefault()
+      const thiss = $(this)
+
+      const post_pk = $(this).children().children().children('input[name=post_pk]').val()
+      const body = $(this).children().children().children('textarea[name=body]').val()
+      // alert(body + post_pk)
+      $.ajax({
+        type: 'POST',
+        url: '/comment/new/',
+        data: {
+          'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val(),
+          'post_pk': post_pk,
+          'body': body
+        },
+        success: function(response){
+          $('textarea[name=body]').val('')
+          
+          comments = parseInt(response['comments'])
+          if (comments == 1) {
+            thiss.siblings('.total-comments').text('1 Comment')
+          }
+          else {
+            thiss.siblings('.total-comments').text(`${comments} Comments`)
+          }
+
+          $(`#ajax-comment-${post_pk}`).show('fast')
+          update_button = response['update_button']
+          delete_button = response['delete_button']
+          commentor_profile = response['commentor_profile']
+          commentor_avatar = response['commentor_avatar']
+          commentor_username = response['commentor_username']
+          comment_created = response['comment_created']
+          $(`#ajax-comment-${post_pk}`).append(`
+            <div class="comment">
+              <a href="${delete_button}" class="ui right floated basic mini button">Delete</a>
+              <a href="${update_button}" class="ui right floated basic mini button">Update</a>
+              <a href="${commentor_profile}" class="avatar">
+                <img class="comment-avatar" src="${commentor_avatar}">
+              </a>
+              <div class="content">
+                <a href="${commentor_profile}" class="author">${commentor_username}</a>
+                <div class="metadata">
+                  <span class="date">${ comment_created} ago</span>
+                </div>
+                <div class="text">
+                  ${body}
+                </div>
+                <div class="actions">
+                  <a class="reply">Reply</a>
+                </div>
+              </div>
+            </div>
+          `)
+            console.log(response)
+          },
+          error: function(response){
+            body.val('')
+            console.log(response)
+        }
+      })
+    })
+  
+  })
+
+</script>
+{% endblock scripts %}

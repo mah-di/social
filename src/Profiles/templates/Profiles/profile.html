@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Profile
+{% endblock title %}
+
+{% block content %}
+{% if profile.user == user %}
+<!-- Modal -->
+<div class="ui modal position">
+    <div class="header">Update Your Profile Information</div>
+    <div class="scrolling content">
+        <form class="ui form" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{form.as_p}}
+    </div>
+    <div class="actions">
+            <button class="ui green button" type="submit">Update</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="ui segment">
+    <div class="ui grid">
+        <div class="row">
+            <div class="six wide column">
+                <img src={{profile.avatar.url}} width="250px" height="250px" class="ui small circular centered image">
+                <h2 class="text-center">{{profile.get_full_name}} <span class="username">(<a href="{% url 'profiles:profile' slug=profile.slug %}">@{{profile.user}}</a>)</span></h2>
+                {% if profile.user == user %}
+                <div class="row mt-5">
+                    <button id="modal-tg" class="ui pro-update green button">Update</button>
+                </div>
+                {% endif %}
+                <div class="ui fluid vertical menu">
+                    <div class="item">
+                        Posts
+                        <div class="ui label">{{profile.get_total_posts}}</div>
+                    </div>
+                    <div class="item">
+                        Likes
+                        <div class="ui label">{{profile.likes_given}}</div>
+                    </div>
+                    <div class="item">
+                        Likes Received
+                        <div class="ui label">{{profile.likes_gotten}}</div>
+                    </div>
+                    <div class="item">
+                        Comments
+                        <div class="ui label">{{profile.get_total_comments}}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="one wide column"></div>
+            <div class="nine wide column">
+                <h3>Profile Information</h3>
+                <table class="ui very basic table">
+                    <tbody>
+                        <tr>
+                            <td class="collapsing">Bio</td>
+                            <td>{{profile.bio|linebreaks}}</td>
+                        </tr>
+                        {% if profile.user.email %}
+                        <tr>
+                            <td class="collapsing">Email</td>
+                            <td>{{profile.user.email}}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="collapsing">Member since</td>
+                            <td>{{profile.created|date:'j F, Y'}}</td>
+                        </tr>
+                        <tr>
+                            <td class="collapsing">Friends</td>
+                            <td>{{profile.get_total_friends}}</td>
+                        </tr>
+                        <tr>
+                    </tbody>
+                </table>
+                <div class="ui grid">
+                    {% for friend in profile.get_all_friends %}
+                    <div class="three wide column">
+                        <img src="{{ friend.avatar.url }}" alt="" class="ui tiny circular centered image">
+                        <p class="text-center"><a href="{% url 'profiles:profile' slug=friend.user %}">@{{friend.user}}</a></p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <br>
+                <div class="ui bottom attached button">See all</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="ui grid">
+    <div class="two wide column"></div>
+    <div class="twelve wide column">
+        <div class="ui feed">
+            {% for post in profile.get_all_posts %}
+              <div  class="event ui card feed-post">
+                <div class="label">
+                  <a href="{% url 'profiles:profile' slug=post.author.slug %}">
+                    <img src={{post.author.avatar.url}}>
+                  </a>
+                </div>
+                <div class="content">
+                  {% ifequal user_profile post.author %}
+                  <a href="{% url 'posts:delete_post' pk=post.pk %}" class="ui right floated basic mini button">Delete</a>
+                  <a href="{% url 'posts:update_post' pk=post.pk %}" class="ui right floated basic mini button">Update</a>
+                  {% endifequal %}
+                  <div class="date">
+                    <a class="author-cus" href="{% url 'profiles:profile' slug=post.author.slug %}">{{post.author.get_full_name}}</a>
+                  </div>
+                  <div class="meta">
+                    <a class="" href="{% url 'profiles:profile' slug=post.author.slug %}">@{{post.author.user}}</a>
+                  </div>
+                  <div class="summary">
+                    <span class="date-cus">{{post.created|timesince}} ago</span>
+                  </div>
+                  <div class="extra text">
+                      {{post.get_preview|linebreaks}}
+                      {% if post.is_more %}
+                      <a href="{% url 'posts:single_post' pk=post.pk %}">see more</a>
+                      {% endif %}
+                  </div>
+                  <br>
+                  {% if post.image %}
+                    <div class="ui medium images">
+                        <img src={{post.image.url}}>
+                    </div>
+                    <br>
+                  {% endif %}
+                  <div class="">
+                    <form class="like_unlike" id="{{post.id}}" action="{% url 'posts:like_unlike' %}" method="POST">
+                      {% csrf_token %}
+                      <button type="submit" class="ui {% if user_profile not in post.likes.all %} basic {% endif %} primary mini button">
+                        <i class="thumbs up icon"></i>
+                        <span class="like-btn-{{post.id}}">
+                          {% if user_profile not in post.likes.all %}
+                          Like
+                          {% else %}
+                          Unlike
+                          {% endif %}
+                        </span>
+                      </button>
+                      &nbsp;
+                      <span class="like-count-{{post.id}}">
+                      {% if post.get_likes == 0 %}
+                        No Likes
+                      {% elif post.get_likes == 1 %}
+                        1 Like
+                      {% else %}
+                        {{post.get_likes}} Likes
+                      {% endif %}
+                      </span>
+        
+                      <a href="{% url 'posts:single_post' pk=post.pk %}">
+                        {% if post.get_total_comments == 0 %}
+                          <span class="right floated">No Comments</span>
+                        {% elif post.get_total_comments == 1 %}
+                          <span class="right floated">{{post.get_total_comments}} Comment</span>
+                        {% else %}
+                          <span class="right floated">{{post.get_total_comments}} Comments</span>
+                        {% endif %}
+                      </a>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){
+
+    $('.like_unlike').submit(function(e){
+      e.preventDefault()
+
+      const post_id = $(this).attr('id')
+      const url = $(this).attr('action')
+      const action = $.trim($(`.like-btn-${post_id}`).text())
+      console.log(action)
+
+      $.ajax({
+        type: 'POST',
+        url: url,
+        data: {
+          'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val(),
+          'post_id': post_id,
+        },
+        success: function(response) {
+          if (action === 'Like') {
+            $(`.like-btn-${post_id}`).text('Unlike')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').removeClass('basic')
+          }
+          else {
+            $(`.like-btn-${post_id}`).text('Like')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').addClass('basic')
+          }
+
+          likes = parseInt(response['likes'])
+          if (likes === 0) {
+            $(`.like-count-${post_id}`).text('No Likes')
+          }
+          else if (likes === 1) {
+            $(`.like-count-${post_id}`).text('1 Like')
+          }
+          else {
+            $(`.like-count-${post_id}`).text(`${likes} Likes`)
+          }
+        },
+        error: function(response) {
+          console.log(response)
+        },
+      })
+    })
+
+  })
+</script>
+{% endblock scripts %}

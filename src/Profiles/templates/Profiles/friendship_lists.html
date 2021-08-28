@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+
+{% block title %}
+{% endblock title %}
+
+
+{% block content %}
+
+<div class="ui grid">
+    <div class="row">
+        <div class="three wide column"></div>
+        <div class="ten wide column">
+
+            {% if q_type == 'friends' %}
+
+            <div class="ui card fluid">
+                <div class="content">
+                    <h2>Your Friends</h2>
+                </div>
+            </div>
+            {% for profile in friends %}
+            <div style="top: 15%;" class="ui modal tiny">
+                <div class="header">Remove Friend</div>
+                <div class="content">
+                    <p>Are you sure you want to remove {{profile.get_full_name}} as friend?</p>
+                </div>
+                <div class="actions">
+                    <form action="{% url 'profiles:remove_friend' %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="friend_pk" value="{{profile.pk}}" id="">
+                        <button type="submit" class="ui approve button">Confirm</button>
+                        <div class="ui cancel button">Cancel</div>
+                    </form>
+                </div>
+            </div>
+
+
+            <div class="ui card fluid">
+                <div class="content">
+                    
+                    <div class="header">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">
+                            <img class="ui avatar image" src={{profile.avatar.url}}>
+                        </a>
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.get_full_name}}</a>
+                    </div>
+                    <div class="meta">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.user}}</a>
+                        <br>
+                        Member since {{profile.created}}
+                    </div>
+                    <div class="description">
+                        You are friends with {{profile.user}}
+                    </div>
+                </div>
+                <div class="extra content">
+                    <div class="ui two buttons">
+                        <div>
+                            <a href="{% url 'profiles:profile' slug=profile.slug %}" class="ui basic blue button">View Profile</a>
+                        </div>
+                        <div>
+                            <button class="ui modal-opener basic red button">Unfriend</button>
+                        </div>
+                    </div>
+                </div> 
+            </div>
+            {% endfor %}
+            {% if not friends %}
+                <p>Oops, you don't have any friends yet. <a href="">Let's add some!</a></p>
+            {% endif %}
+
+            {% elif q_type == 'received' %}
+
+            <div class="ui card fluid">
+                <div class="content">
+                    <h2>Friend Requests</h2>
+                </div>
+            </div>
+            {% for profile in f_requests %}
+            <div class="ui card fluid">
+                <div class="content">
+                    
+                    <div class="header">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">
+                            <img class="ui avatar image" src={{profile.avatar.url}}>
+                        </a>
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.get_full_name}}</a>
+                    </div>
+                    <div class="meta">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.user}}</a>
+                        <br>
+                        Member since {{profile.created}}
+                    </div>
+                    <div class="description">
+                        {{profile.user}} sent you a friend request.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <div class="ui two buttons">
+                        <form action="{% url 'profiles:accept' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_pk" value="{{profile.pk}}" id="">
+                            <button type="submit" class="ui basic green button">Accept</button>
+                        </form>
+                        <form action="{% url 'profiles:remove' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_pk" value="{{profile.pk}}" id="">
+                            <button type="submit" class="ui basic red button">Reject</button>
+                        </form>
+                    </div>
+                </div> 
+            </div>
+            {% endfor %}
+            {% if not f_requests %}
+                <p>You currently don't have any friend requests. <a href="">Find new friends.</a></p>
+            {% endif %}
+
+            {% elif q_type == 'sent' %}
+
+            <div class="ui card fluid">
+                <div class="content">
+                    <h2>Friend Requests Sent</h2>
+                </div>
+            </div>
+            {% for profile in sent_requests %}
+            <div class="ui card fluid">
+                <div class="content">
+                    
+                    <div class="header">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">
+                            <img class="ui avatar image" src={{profile.avatar.url}}>
+                        </a>
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.get_full_name}}</a>
+                    </div>
+                    <div class="meta">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.user}}</a>
+                        <br>
+                        Member since {{profile.created}}
+                    </div>
+                    <div class="description">
+                        {{profile.user}} hasn't accepted your request yet.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <div class="ui two buttons">
+                        <div>
+                            <a href="{% url 'profiles:profile' slug=profile.slug %}" class="ui basic primary button">View Profile</a>
+                        </div>
+                        <form action="{% url 'profiles:remove' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_pk" value="{{profile.pk}}" id="">
+                            <button type="submit" class="ui basic red button">Cancel Request</button>
+                        </form></div>
+                </div> 
+            </div>
+            {% endfor %}
+            {% if not sent_requests %}
+                <p>You currently don't have any pending sent requests. <a href="">Find new friends.</a></p>
+            {% endif %}
+
+            {% elif q_type == 'add_friends' %}
+
+            {% if not profiles %}
+                <p>This feature is currently not available. Please try again later.</p>
+            {% else %}
+            <div class="ui card fluid">
+                <div class="content">
+                    <h2>Add New Friends</h2>
+                </div>
+            </div>
+            {% for profile in profiles %}
+            <div class="ui card fluid">
+                <div class="content">
+                    
+                    <div class="header">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">
+                            <img class="ui avatar image" src={{profile.avatar.url}}>
+                        </a>
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.get_full_name}}</a>
+                    </div>
+                    <div class="meta">
+                        <a href="{% url 'profiles:profile' slug=profile.slug %}">{{profile.user}}</a>
+                        <br>
+                        Member since {{profile.created}}
+                    </div>
+                    <div class="description">
+                       Send {{profile.user}} a friend request.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <div class="ui two buttons">
+                        <div>
+                            <a href="{% url 'profiles:profile' slug=profile.slug %}" class="ui basic primary button">View Profile</a>
+                        </div>
+                        <form action="{% url 'profiles:send_request' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_pk" value="{{profile.pk}}" id="">
+                            <button type="submit" class="ui basic green button">Add Friend</button>
+                        </form></div>
+                </div> 
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% endif %}
+
+</div>
+
+{% endblock content %}
+
+
+{% block scripts %}
+<script>
+    $(document).ready(function(){
+        $('.modal-opener').on('click', function(){
+            $(this).parents('.ui.card.fluid').prev('.tiny.modal')
+                .modal('show')
+                ;
+        })
+    })
+</script>
+{% endblock scripts %}

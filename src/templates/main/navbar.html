@@ -1,0 +1,81 @@
+{% url 'posts:feed' as feed %}
+{% url 'profiles:profile' slug=request.user.username as my_profile %}
+{% url 'profiles:friends_list' as friends %}
+{% url 'profiles:friend_requests' as friend_requests %}
+{% url 'profiles:sent_requests' as sent_requests %}
+{% url 'profiles:add_friends' as add_friends %}
+
+
+<div class="ui inverted menu nav">
+    <div class="ui container">
+      <a href="{{feed}}" class="item {% if request.path == feed %} active {% endif %}">
+          <h3>Social Site</h3>
+      </a>
+  
+      <div class="right menu">
+          {% if request.user.is_authenticated %}
+          <div class="item">
+            <div class="ui floating dropdown icon button">
+              
+              <i class="bell icon"><span {% if user_profile.new_notifications > 1 %} style="color: red;" {% endif %}>{{user_profile.new_notifications}}</span></i>&nbsp;
+                <div class="menu">
+                  {% for notification in user_profile.get_notifications %}
+                    {% if notification.tobe_shown %}
+                    <a href="{% url 'notifications:notified' pk=notification.pk %}" class="item">
+                      {% if not notification.seen %}
+                        <span style="color: red;">• &nbsp;</span>
+                      {% endif %}
+                      {{notification}}
+                    </a>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+          </div>
+          <div class="item">
+            <div class="ui floating dropdown icon teal button">
+                Friends
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                  <a href="{{friends}}" class="item {% if request.path == friends %} active {% endif %}">
+                    <i class="person green icon"></i>Friends
+                    <div class="ui vertical label">{{user_profile.get_total_friends}}</div>
+                  </a>
+                  <a href="{{friend_requests}}" class="item {% if request.path == friend_requests %} active {% endif %}">
+                    <i class="plus green icon"></i>Friend Requests
+                    <div class="ui vertical green label">{{friend_requests_count}}</div>
+                  </a>
+                  <a href="{{sent_requests}}" class="item {% if request.path == sent_requests %} active {% endif %}">
+                    <i class="person green icon"></i>Sent Requests
+                    <div class="ui vertical blue label">{{sent_requests_count}}</div>
+                  </a>
+                  <a href="{{add_friends}}" class="item {% if request.path == add_friends %} active {% endif %}"><i class="person green icon"></i>Add Friends</a>
+                </div>
+              </div>
+          </div>
+               <div class="item">
+                <form action="" method="GET">
+                  <div class="ui action left icon input">
+                  <input class="prompt" type="text" name='q' placeholder="name of a friend...">
+                  <i class="search icon"></i>
+                  <button type='submit' class="ui button">Search</button>
+                  </div>
+              </form>
+              </div>
+          
+              <a href="{{my_profile}}" class="item {% if request.path == my_profile %} active {% endif %}">
+                <img src="{{user_profile.avatar.url}}" class="ui avatar image" alt="">  &nbsp; &nbsp;
+                {{ request.user }} &nbsp; &nbsp; <span style="color: rgb(8, 214, 8);">•</span>
+              </a>
+  
+              <a href="{% url 'account_logout' %}" class="ui item">
+                  Logout
+              </a>
+          {% else %}
+          <a href="{% url 'account_login' %}" class="ui item">
+                  Login
+              </a>
+          {% endif %}
+      </div>
+    </div>
+  </div>

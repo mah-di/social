@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+
+{% block title %}
+{% endblock title %}
+
+
+{% block content %}
+<div class="ui grid">
+    <div class="two wide column"></div>
+    <div class="twelve wide column">
+        <div class="ui feed">
+            <div  class="event ui card feed-post">
+                <div class="label">
+                  <a href="{% url 'profiles:profile' slug=post.author.slug %}">
+                    <img src={{post.author.avatar.url}}>
+                  </a>
+                </div>
+                <div class="content">
+                    {% ifequal user_profile post.author %}
+                    <a href="{% url 'posts:delete_post' pk=post.pk %}" class="ui right floated basic mini button">Delete</a>
+                    <a href="{% url 'posts:update_post' pk=post.pk %}" class="ui right floated basic mini button">Update</a>
+                    {% endifequal %}
+                    <div class="date">
+                        <a class="author-cus" href="{% url 'profiles:profile' slug=post.author.slug %}">{{post.author.get_full_name}}</a>
+                    </div>
+                    <div class="meta">
+                        <a class="" href="{% url 'profiles:profile' slug=post.author.slug %}">@{{post.author.user}}</a>
+                    </div>
+                  <div class="summary">
+                    <span class="date-cus">{{post.created|timesince}} ago</span>
+                  </div>
+                  <div class="extra text">
+                      {{post.content|linebreaks}}
+                  </div>
+                  <br>
+                  {% if post.image %}
+                    <div class="ui medium images">
+                        <img src={{post.image.url}}>
+                    </div>
+                    <br>
+                  {% endif %}
+                  <hr>
+                  <br>
+                  <div class="">
+                    <form class="like_unlike" id="{{post.id}}" action="{% url 'posts:like_unlike' %}" method="POST">
+                      {% csrf_token %}
+                      <button type="submit" class="ui {% if user_profile not in post.likes.all %} basic {% endif %} primary mini button">
+                        <i class="thumbs up icon"></i>
+                        <span class="like-btn-{{post.id}}">
+                          {% if user_profile not in post.likes.all %}
+                          Like
+                          {% else %}
+                          Unlike
+                          {% endif %}
+                        </span>
+                      </button>
+                      &nbsp;
+                      <span class="like-count-{{post.id}}">
+                      {% if post.get_likes == 0 %}
+                        No Likes
+                      {% elif post.get_likes == 1 %}
+                        1 Like
+                      {% else %}
+                        {{post.get_likes}} Likes
+                      {% endif %}
+                      </span>
+
+                      <span class="right floated total-comments">
+                        {% if post.get_total_comments == 0 %}
+                          No Comments
+                        {% elif post.get_total_comments == 1 %}
+                          1 Comment
+                        {% else %}
+                          {{post.get_total_comments}} Comments
+                        {% endif %}
+                      </span>
+                    </form>
+                    <div style="display: none;" class="ui comments" id="ajax-comment-{{post.pk}}">
+
+                    </div>
+                    <div class="ui comments" id="comment-box">
+                      {% for comment in post.get_comments %}
+                        <div class="comment">
+                          {% ifequal user_profile comment.commentor %}
+                          <a href="{% url 'posts:delete_comment' pk=comment.pk %}" class="ui right floated basic mini button">Delete</a>
+                          <a href="{% url 'posts:update_comment' pk=comment.pk %}" class="ui right floated basic mini button">Update</a>
+                          {% endifequal %}
+                          <a href="{% url 'profiles:profile' slug=comment.commentor.slug %}" class="avatar">
+                            <img class="comment-avatar" src={{comment.commentor.avatar.url}}>
+                          </a>
+                          <div class="content">
+                            <a href="{% url 'profiles:profile' slug=comment.commentor.slug %}" class="author">{{comment.commentor.user}}</a>
+                            <div class="metadata">
+                              <span class="date">{{ comment.created|timesince }} ago</span>
+                            </div>
+                            <div class="text">
+                              {{comment.body|linebreaks}}
+                            </div>
+                            <div class="actions">
+                              <a class="reply">Reply</a>
+                            </div>
+                          </div>
+                        </div>
+                      {% endfor %}
+                      {% if comments.has_next %}
+                      <!-- <br>
+                      <button class="ui fluid tiny button view-more" id="{{comments.next_page_number}}">view more comments</a>
+                      <br> -->
+                      {% endif %}
+                    </div>
+                    <form action="{% url 'posts:make_comment' %}" method="POST" id="form{{post.pk}}" class="ui form comment-form">
+                      {% csrf_token %}
+                      <div class="fields">
+                        <div class="twelve wide field">
+                          {{comment_form}}
+                          <input type="hidden" name="post_pk" value="{{post.pk}}">
+                        </div>
+                        <div class="four wide field">
+                          <button type="submit" class="ui purple comment-button button">Comment</button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){
+
+    $('.like_unlike').submit(function(e){
+      e.preventDefault()
+
+      const post_id = $(this).attr('id')
+      const url = $(this).attr('action')
+      const action = $.trim($(`.like-btn-${post_id}`).text())
+      console.log(action)
+
+      $.ajax({
+        type: 'POST',
+        url: url,
+        data: {
+          'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val(),
+          'post_id': post_id,
+        },
+        success: function(response) {
+          if (action === 'Like') {
+            $(`.like-btn-${post_id}`).text('Unlike')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').removeClass('basic')
+          }
+          else {
+            $(`.like-btn-${post_id}`).text('Like')
+            $(`.like-btn-${post_id}`).parent('.ui.primary.mini.button').addClass('basic')
+          }
+
+          likes = parseInt(response['likes'])
+          if (likes === 0) {
+            $(`.like-count-${post_id}`).text('No Likes')
+          }
+          else if (likes === 1) {
+            $(`.like-count-${post_id}`).text('1 Like')
+          }
+          else {
+            $(`.like-count-${post_id}`).text(`${likes} Likes`)
+          }
+        },
+        error: function(response) {
+          console.log(response)
+        },
+      })
+    })
+  
+    $('.comment-form').on('submit', function(e){
+      e.preventDefault()
+      const thiss = $(this)
+
+      const post_pk = $(this).children().children().children('input[name=post_pk]').val()
+      const body = $(this).children().children().children('textarea[name=body]').val()
+      // alert(body + post_pk)
+      $.ajax({
+        type: 'POST',
+        url: '/comment/new/',
+        data: {
+          'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val(),
+          'post_pk': post_pk,
+          'body': body
+        },
+        success: function(response){
+          $('textarea[name=body]').val('')
+          
+          comments = parseInt(response['comments'])
+          if (comments == 1) {
+            thiss.siblings('.like_unlike').children('.total-comments').text('1 Comment')
+          }
+          else {
+            thiss.siblings('.like_unlike').children('.total-comments').text(`${comments} Comments`)
+          }
+
+          $(`#ajax-comment-${post_pk}`).show()
+          update_button = response['update_button']
+          delete_button = response['delete_button']
+          commentor_profile = response['commentor_profile']
+          commentor_avatar = response['commentor_avatar']
+          commentor_username = response['commentor_username']
+          comment_created = response['comment_created']
+          $(`#ajax-comment-${post_pk}`).append(`
+            <div class="comment">
+              <a href="${delete_button}" class="ui right floated basic mini button">Delete</a>
+              <a href="${update_button}" class="ui right floated basic mini button">Update</a>
+              <a href="${commentor_profile}" class="avatar">
+                <img class="comment-avatar" src="${commentor_avatar}">
+              </a>
+              <div class="content">
+                <a href="${commentor_profile}" class="author">${commentor_username}</a>
+                <div class="metadata">
+                  <span class="date">${ comment_created} ago</span>
+                </div>
+                <div class="text">
+                  ${body}
+                </div>
+                <div class="actions">
+                  <a class="reply">Reply</a>
+                </div>
+              </div>
+            </div>
+          `)
+            console.log(response)
+          },
+          error: function(response){
+            body.val('')
+            console.log(response)
+        }
+      })
+    })
+    
+    // $('.view-more').on('click', function(){
+    //   const next_page = parseInt($(this).attr('id'))
+    //   $.ajax({
+    //     type: 'POST',
+    //     url: '/comments/view-more/',
+    //     data: {
+    //       'next_page': next_page,
+    //     },
+    //     success: function(response){
+    //       comments = response['comments']
+    //       comments.forEach(comment => {
+    //         $('#comment-box').append(
+    //           ``
+    //         )
+    //       });
+    //     },
+    //     error: function(response){
+
+    //     },
+    //   })
+    //   alert(next_page)
+    // })
+
+  })
+</script>
+{% endblock scripts %}
